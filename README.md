@@ -1,5 +1,7 @@
 # firestore-rest-parser
 
+[![npm version](https://badge.fury.io/js/firestore-rest-parser.svg)](https://badge.fury.io/js/firestore-rest-parser)
+
 Parse and use [Firestore REST API JSON](https://firebase.google.com/docs/firestore/reference/rest/) as a nice pretty object ✨
 
 Turn this:
