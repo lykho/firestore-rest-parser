@@ -9,7 +9,7 @@ import {
   MapValue,
 } from './types'
 
-export default function parse<T extends Record<string, any>>(
+export function parse<T extends Record<string, any>>(
   responseObject: FirestoreResponseObject
 ): T {
   const { fields } = responseObject

@@ -1,3 +1,2 @@
-import parse from './parser'
-export default parse
+export * from './parser'
 export * from './types'

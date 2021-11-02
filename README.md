@@ -44,7 +44,7 @@ Using yarn:
 ## Example
 
 ```javascript
-import parse from 'firestore-rest-parser'
+import { parse } from 'firestore-rest-parser'
 
 const somehowReceivedFirestoreJSON = {
   name: 'resouce/name',
@@ -85,7 +85,7 @@ const data = parse(somehowReceivedFirestoreJSON)
 ## Usage
 
 ```typescript
-import parse from 'firestore-rest-parser'
+import { parse } from 'firestore-rest-parser'
 
 interface ParsedData {}
 

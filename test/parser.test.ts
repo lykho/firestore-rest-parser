@@ -1,4 +1,5 @@
-import parse, {
+import {
+  parse,
   FirestoreResponseObject,
   FirestoreResponseObjectField,
 } from '../src'
