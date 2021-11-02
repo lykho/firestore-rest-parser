@@ -32,7 +32,17 @@
     "trailingComma": "es5"
   },
   "name": "firestore-rest-parser",
-  "author": "Kirill Lykho",
+  "description": "Parse and use Firestore REST API JSON as a nice pretty object ✨",
+  "keywords": ["firestore", "firestore json", "fiirestore parser", "firestore rest", "firestore response parser", "firestore rest"],
+  "author": {
+    "name": "Kirill Lykho",
+    "email": "lykho.kirill@gmail.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lykho/firestore-rest-parser"
+  },
+  "homepage": "https://github.com/lykho/firestore-rest-parser#readme",
   "module": "dist/firestore-rest-parser.esm.js",
   "size-limit": [
     {
