@@ -1,3 +1,8 @@
+import { GeoPoint } from './data-types/geopoint'
+import { Reference } from './data-types/reference'
+import { Timestamp } from './data-types/timestamp'
+import { Bytes } from './data-types/bytes'
+
 export enum FirestoreValueFieldNames {
   Null = 'nullValue',
   Boolean = 'booleanValue',
@@ -53,6 +58,25 @@ export type FirestoreValues =
   | GeoPointValue
   | ArrayValue
   | MapValue
+
+export type FirestoreConverterValues =
+  | NullValue
+  | BooleanValue
+  | IntegerValue
+  | DoubleValue
+  | StringValue
+  | Timestamp
+  | Bytes
+  | GeoPoint
+  | Reference
+  | ArrayConverterValue
+  | MapConverterValue
+
+export type ArrayConverterValue = Array<FirestoreConverterValues>
+
+export interface MapConverterValue {
+  [key: string]: FirestoreConverterValues
+}
 
 export type FirestoreValueObject = {
   [key in FirestoreValueFieldNames]: FirestoreValues

@@ -1,21 +1,8 @@
-import {
-  parse,
-  FirestoreResponseObject,
-  FirestoreResponseObjectField,
-} from '../src'
-
-const createFirestoreResponseObject = (
-  fields: FirestoreResponseObjectField
-): FirestoreResponseObject => ({
-  name: 'resource/name',
-  fields,
-  createTime: '',
-  updateTime: '',
-})
+import { parse, createRESTObject } from '../src'
 
 describe('Parser', () => {
   it('should parse nullValue', () => {
-    const obj = createFirestoreResponseObject({
+    const obj = createRESTObject({
       field: {
         nullValue: null,
       },
@@ -25,7 +12,7 @@ describe('Parser', () => {
   })
 
   it('should parse boolean value', () => {
-    const obj = createFirestoreResponseObject({
+    const obj = createRESTObject({
       field: {
         booleanValue: true,
       },
@@ -35,7 +22,7 @@ describe('Parser', () => {
   })
 
   it('should parse integer value', () => {
-    const obj = createFirestoreResponseObject({
+    const obj = createRESTObject({
       field: {
         integerValue: 101,
       },
@@ -45,7 +32,7 @@ describe('Parser', () => {
   })
 
   it('should parse double value', () => {
-    const obj = createFirestoreResponseObject({
+    const obj = createRESTObject({
       field: {
         doubleValue: 10.1,
       },
@@ -55,7 +42,7 @@ describe('Parser', () => {
   })
 
   it('should parse timestamp value', () => {
-    const obj = createFirestoreResponseObject({
+    const obj = createRESTObject({
       field: {
         timestampValue: '2014-10-02T15:01:23Z',
       },
@@ -65,7 +52,7 @@ describe('Parser', () => {
   })
 
   it('should parse string value', () => {
-    const obj = createFirestoreResponseObject({
+    const obj = createRESTObject({
       field: {
         stringValue: 'Howdy',
       },
@@ -76,7 +63,7 @@ describe('Parser', () => {
 
   it('should parse bytes value', () => {
     const bytes = Buffer.from('buuuufer').toString('base64')
-    const obj = createFirestoreResponseObject({
+    const obj = createRESTObject({
       field: {
         bytesValue: bytes,
       },
@@ -86,7 +73,7 @@ describe('Parser', () => {
   })
 
   it('should parse reference value', () => {
-    const obj = createFirestoreResponseObject({
+    const obj = createRESTObject({
       field: {
         referenceValue: 'You shall not pass!',
       },
@@ -96,7 +83,7 @@ describe('Parser', () => {
   })
 
   it('should parse geopoint value', () => {
-    const obj = createFirestoreResponseObject({
+    const obj = createRESTObject({
       field: {
         geoPointValue: {
           latitude: 0,
@@ -114,7 +101,7 @@ describe('Parser', () => {
   })
 
   it('should parse array value', () => {
-    const obj = createFirestoreResponseObject({
+    const obj = createRESTObject({
       field: {
         arrayValue: {
           values: [{ stringValue: 'Hellow' }],
@@ -126,7 +113,7 @@ describe('Parser', () => {
   })
 
   it('should parse object value', () => {
-    const obj = createFirestoreResponseObject({
+    const obj = createRESTObject({
       field: {
         mapValue: {
           fields: {
