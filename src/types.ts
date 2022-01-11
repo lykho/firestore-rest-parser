@@ -105,7 +105,7 @@ export type FirestoreResponseObjectField = Record<
 
 export interface FirestoreResponseObject {
   name: string
-  fields: FirestoreResponseObjectField
+  fields: FirestoreResponseObjectField | null
   createTime: string
   updateTime: string
 }

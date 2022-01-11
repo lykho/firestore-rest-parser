@@ -9,9 +9,11 @@ import {
   MapValue,
 } from './types'
 
-export function parse<T extends Record<string, any>>(
+export function parse<T extends Record<string, any> = Record<string, any>>(
   responseObject: FirestoreResponseObject
-): T {
+): T | null {
+  if (!responseObject || !responseObject.fields) return null
+
   const { fields } = responseObject
 
   const parsedObject: Record<string, any> = {}
