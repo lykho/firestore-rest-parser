@@ -1,7 +1,7 @@
 import { FirestoreResponseObjectField } from './types'
 
 export function createRESTObject(
-  fields: FirestoreResponseObjectField,
+  fields: FirestoreResponseObjectField | null,
   name = '',
   createTime = '',
   updateTime = ''
