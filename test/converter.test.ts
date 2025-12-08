@@ -1,3 +1,4 @@
+import { describe, it, expect } from 'vitest'
 import {
   convert,
   Reference,
@@ -6,7 +7,6 @@ import {
   GeoPoint,
   FirestoreConverterValues,
 } from '../src'
-import * as Buffer from 'buffer'
 
 describe('Converter', () => {
   it('should throw error on unprocessable data type', () => {
@@ -73,7 +73,7 @@ describe('Converter', () => {
     const res = convert(obj)
     expect(res).toEqual({
       prop: {
-        timestampValue: 1641727129175,
+        timestampValue: new Date(millis).toISOString(),
       },
     })
   })
@@ -104,7 +104,7 @@ describe('Converter', () => {
   })
 
   it('should convert bytes value', () => {
-    const bytes = new Bytes(Buffer.Buffer.from('value'))
+    const bytes = new Bytes(Buffer.from('value'))
     const obj = {
       prop: bytes,
     }
@@ -180,6 +180,148 @@ describe('Converter', () => {
           },
         },
       },
+    })
+  })
+
+  describe('Edge Cases', () => {
+    it('should convert empty object', () => {
+      const obj = {}
+      const res = convert(obj)
+      expect(res).toEqual({})
+    })
+
+    it('should convert empty array', () => {
+      const obj = {
+        items: [],
+      }
+      const res = convert(obj)
+      expect(res).toEqual({
+        items: {
+          arrayValue: {
+            values: [],
+          },
+        },
+      })
+    })
+
+    it('should convert deeply nested objects (3+ levels)', () => {
+      const obj = {
+        level1: {
+          level2: {
+            level3: {
+              value: 'deep',
+            },
+          },
+        },
+      }
+      const res = convert(obj)
+      expect(res).toEqual({
+        level1: {
+          mapValue: {
+            fields: {
+              level2: {
+                mapValue: {
+                  fields: {
+                    level3: {
+                      mapValue: {
+                        fields: {
+                          value: {
+                            stringValue: 'deep',
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      })
+    })
+
+    it('should convert nested arrays', () => {
+      const obj = {
+        matrix: [
+          [1, 2],
+          [3, 4],
+        ],
+      }
+      const res = convert(obj)
+      expect(res).toEqual({
+        matrix: {
+          arrayValue: {
+            values: [
+              {
+                arrayValue: {
+                  values: [{ integerValue: 1 }, { integerValue: 2 }],
+                },
+              },
+              {
+                arrayValue: {
+                  values: [{ integerValue: 3 }, { integerValue: 4 }],
+                },
+              },
+            ],
+          },
+        },
+      })
+    })
+
+    it('should throw error on undefined values', () => {
+      const obj = { prop: undefined } as unknown as Record<
+        string,
+        FirestoreConverterValues
+      >
+      expect(() => convert(obj)).toThrowError('Unprocessable data type')
+    })
+
+    it('should throw error on function values', () => {
+      const obj = { prop: () => {} } as unknown as Record<
+        string,
+        FirestoreConverterValues
+      >
+      expect(() => convert(obj)).toThrowError('Unprocessable data type')
+    })
+
+    it('should convert zero values correctly', () => {
+      const obj = {
+        zero: 0,
+        zeroFloat: 0.0,
+        emptyString: '',
+        falseVal: false,
+      }
+      const res = convert(obj)
+      expect(res).toEqual({
+        zero: { integerValue: 0 },
+        zeroFloat: { integerValue: 0 },
+        emptyString: { stringValue: '' },
+        falseVal: { booleanValue: false },
+      })
+    })
+
+    it('should convert negative numbers', () => {
+      const obj = {
+        negInt: -42,
+        negFloat: -3.14,
+      }
+      const res = convert(obj)
+      expect(res).toEqual({
+        negInt: { integerValue: -42 },
+        negFloat: { doubleValue: -3.14 },
+      })
+    })
+
+    it('should convert special number values', () => {
+      const obj = {
+        infinity: Infinity,
+        negInfinity: -Infinity,
+      }
+      const res = convert(obj)
+      expect(res).toEqual({
+        infinity: { doubleValue: Infinity },
+        negInfinity: { doubleValue: -Infinity },
+      })
     })
   })
 })

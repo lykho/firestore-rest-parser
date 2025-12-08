@@ -7,16 +7,42 @@ import {
   FirestoreValueObject,
   GeoPointValue,
   MapValue,
+  ParsedValue,
 } from './types'
 
-export function parse<T extends Record<string, any> = Record<string, any>>(
+/**
+ * Parses a Firestore REST API response object into a plain JavaScript object.
+ *
+ * This function recursively converts Firestore's typed value format (e.g.,
+ * `{ stringValue: "hello" }`) into plain values (`"hello"`).
+ *
+ * @typeParam T - The expected shape of the parsed result. This is a compile-time
+ *   assertion only and is NOT validated at runtime.
+ * @param responseObject - A Firestore document response containing `name`,
+ *   `fields`, `createTime`, and `updateTime`
+ * @returns The parsed document fields as a plain object, or `null` if the
+ *   document has no fields
+ *
+ * @example
+ * ```typescript
+ * interface User {
+ *   name: string;
+ *   age: number;
+ * }
+ *
+ * const response = await fetch('https://firestore.googleapis.com/...');
+ * const doc = await response.json();
+ * const user = parse<User>(doc);
+ * ```
+ */
+export function parse<T = Record<string, ParsedValue>>(
   responseObject: FirestoreResponseObject
 ): T | null {
   if (!responseObject || !responseObject.fields) return null
 
   const { fields } = responseObject
 
-  const parsedObject: Record<string, any> = {}
+  const parsedObject: Record<string, ParsedValue> = {}
 
   Object.entries(fields).forEach(([name, value]) => {
     parsedObject[name] = parseField(value as FirestoreValueObject)
@@ -55,13 +81,13 @@ const geoPointParser = (
 
 const arrayParser = (
   value: Record<FirestoreValueFieldNames.Array, ArrayValue>
-) =>
-  value[FirestoreValueFieldNames.Array].values.map(value =>
+): ParsedValue[] =>
+  (value[FirestoreValueFieldNames.Array].values ?? []).map(value =>
     parseField(value as FirestoreValueObject)
   )
 
-const mapParser = (value: Record<FirestoreValueFieldNames.Map, MapValue>) => {
-  const parsedObject: Record<string, any> = {}
+const mapParser = (value: Record<FirestoreValueFieldNames.Map, MapValue>): Record<string, ParsedValue> => {
+  const parsedObject: Record<string, ParsedValue> = {}
   Object.entries(value[FirestoreValueFieldNames.Map].fields).forEach(
     ([name, value]) => {
       parsedObject[name] = parseField(value as FirestoreValueObject)
@@ -70,7 +96,12 @@ const mapParser = (value: Record<FirestoreValueFieldNames.Map, MapValue>) => {
   return parsedObject
 }
 
-const parsers: Record<FirestoreValueFieldNames, any> = {
+// Each parser handles a specific Firestore value type, but we use a generic signature
+// to allow the parsers record to be typed as a lookup table
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ParserFunction = (value: any) => ParsedValue
+
+const parsers: Record<FirestoreValueFieldNames, ParserFunction> = {
   [FirestoreValueFieldNames.Null]: createSimpleParser(
     FirestoreValueFieldNames.Null
   ),

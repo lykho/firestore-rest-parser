@@ -2,9 +2,11 @@
 
 [![npm version](https://badge.fury.io/js/firestore-rest-parser.svg)](https://badge.fury.io/js/firestore-rest-parser)
 
-Parse and use [Firestore REST API JSON](https://firebase.google.com/docs/firestore/reference/rest/) as a pure js object ✨
+Parse and use [Firestore REST API JSON](https://firebase.google.com/docs/firestore/reference/rest/) as a pure js object.
 
 Or convert js object to Firestore REST structure.
+
+**Zero dependencies** - lightweight and fast.
 
 Turn this:
 ```json
@@ -42,6 +44,8 @@ Or vice versa.
 - Parse Firestore REST structure into js object
 - Convert js object to Firestore REST compatible structure with type conversion
 - Create full Firestore REST response structure
+- Full TypeScript support with generics
+- Zero runtime dependencies
 
 ## Installing
 
@@ -55,11 +59,11 @@ Using yarn:
 
 ## Example
 
-```javascript
+```typescript
 import { parse } from 'firestore-rest-parser'
 
 const obj = {
-  name: 'resouce/name',
+  name: 'projects/my-project/databases/(default)/documents/users/123',
   fields: {
     permissions: {
       arrayValue: {
@@ -68,19 +72,19 @@ const obj = {
     },
     contacts: {
       mapValue: {
-        email: {
-          prop: {
+        fields: {
+          email: {
             stringValue: 'example@mail.com'
           },
         },
       },
     },
     unreadMessages: {
-        integerValue: 5
+      integerValue: 5
     }
   },
-  createTime: '',
-  updateTime: '',
+  createTime: '2024-01-15T12:00:00Z',
+  updateTime: '2024-01-15T12:00:00Z',
 }
 
 const data = parse(obj)
@@ -104,9 +108,12 @@ To parse Firestore REST structure use `parse` function.
 import { parse } from 'firestore-rest-parser'
 
 const firestoreObject = {
-    fields: {
-        prop: { integerValue: 1 }
-    }
+  name: 'projects/my-project/databases/(default)/documents/collection/doc',
+  fields: {
+    prop: { integerValue: 1 }
+  },
+  createTime: '2024-01-15T12:00:00Z',
+  updateTime: '2024-01-15T12:00:00Z',
 }
 
 const data = parse(firestoreObject)
@@ -115,8 +122,25 @@ const data = parse(firestoreObject)
   console.log(data) => {
     prop: 1
   }
- */
+*/
 ```
+
+#### TypeScript Generics
+
+You can use TypeScript generics to type the parsed result:
+
+```typescript
+interface User {
+  name: string
+  age: number
+  active: boolean
+}
+
+const user = parse<User>(firestoreResponse)
+// user is typed as User | null
+```
+
+**Note:** The generic type is a compile-time assertion only and is not validated at runtime.
 
 ### Convert
 
@@ -148,7 +172,7 @@ const res = convert(data)
       }
     }
   }
- */
+*/
 ```
 
 #### Type helpers
@@ -163,6 +187,7 @@ const data = {
 }
 
 convert(data)
+// Both will produce: { timestampValue: "2022-01-09T12:58:49.175Z" }
 ```
 
 To store `Buffer` value use `Bytes` helper. Provided buffer will be converted to base64 string.
@@ -181,7 +206,7 @@ To store `Reference` (path to element in db) value use `Reference` helper.
 import { convert, Reference } from 'firestore-rest-parser'
 
 const data = {
-  prop: new Reference('path/to/doc')
+  author: new Reference('projects/my-project/databases/(default)/documents/users/123')
 }
 
 convert(data)
@@ -192,7 +217,7 @@ To store `GeoPoint` value use `GeoPoint` helper.
 import { convert, GeoPoint } from 'firestore-rest-parser'
 
 const data = {
-  prop: new GeoPoint(0, 0)
+  location: new GeoPoint(40.7128, -74.0060)
 }
 
 convert(data)
@@ -211,17 +236,55 @@ const data = {
   permissions: ['createUsers']
 }
 
-const res = createRESTObject(convert(data), 'users/userId')
+const res = createRESTObject(
+  convert(data),
+  'projects/my-project/databases/(default)/documents/users/userId',
+  '2024-01-15T12:00:00Z',
+  '2024-01-15T12:00:00Z'
+)
 
-/* console.log(res) => {
-     fields: { /.../ }
-     name: 'users/userId',
-     createTime: '',
-     updateTime: ''
-*/ }
+/*
+  console.log(res) => {
+    name: 'projects/my-project/databases/(default)/documents/users/userId',
+    fields: { ... },
+    createTime: '2024-01-15T12:00:00Z',
+    updateTime: '2024-01-15T12:00:00Z'
+  }
+*/
 ```
 
-#### Firestore type conversion
+### Edge Cases
+
+#### Empty arrays
+```typescript
+// Parsing empty arrays
+parse({ fields: { items: { arrayValue: {} } } })
+// => { items: [] }
+
+// Converting empty arrays
+convert({ items: [] })
+// => { items: { arrayValue: { values: [] } } }
+```
+
+#### Null fields
+```typescript
+// Documents with null fields return null
+const doc = createRESTObject(null)
+parse(doc) // => null
+```
+
+### Error Handling
+
+The `convert` function throws an error for unsupported data types:
+
+```typescript
+// These will throw "Unprocessable data type" error:
+convert({ fn: () => {} })      // Functions
+convert({ sym: Symbol() })     // Symbols
+convert({ undef: undefined })  // undefined
+```
+
+## Firestore type conversion
 
 | Javascript Type         | Firestore Type | Type helper required |
 |-------------------------|----------------|----------------------|
@@ -236,3 +299,19 @@ const res = createRESTObject(convert(data), 'users/userId')
 | GeoPoint                | GeoPoint       | +                    |
 | Array                   | Array          |                      |
 | Object                  | Map            |                      |
+
+## API Reference
+
+| Export | Description |
+|--------|-------------|
+| `parse<T>(response)` | Parses Firestore REST response to plain JS object |
+| `convert(data)` | Converts plain JS object to Firestore REST format |
+| `createRESTObject(fields, name?, createTime?, updateTime?)` | Creates full Firestore document structure |
+| `Timestamp` | Helper class for timestamp values |
+| `Bytes` | Helper class for binary data |
+| `Reference` | Helper class for document references |
+| `GeoPoint` | Helper class for geographic coordinates |
+
+## License
+
+MIT

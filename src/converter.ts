@@ -5,7 +5,7 @@ import {
   isString,
   isArray,
   isPlainObject,
-} from 'lodash'
+} from './type-guards'
 import {
   ArrayConverterValue,
   FirestoreConverterValues,
@@ -19,6 +19,29 @@ import { Reference } from './data-types/reference'
 import { Timestamp } from './data-types/timestamp'
 import { Bytes } from './data-types/bytes'
 
+/**
+ * Converts a plain JavaScript object into Firestore REST API field format.
+ *
+ * This is the inverse of `parse()`. It takes plain values and wraps them in
+ * Firestore's typed format (e.g., `"hello"` becomes `{ stringValue: "hello" }`).
+ *
+ * @param data - A record of field names to values. Values must be null, boolean,
+ *   number, string, arrays, plain objects, or special type wrappers (Timestamp,
+ *   Bytes, Reference, GeoPoint).
+ * @returns Firestore REST API compatible field structure
+ * @throws {Error} If an unsupported data type is encountered (e.g., Symbol, Function)
+ *
+ * @example
+ * ```typescript
+ * const fields = convert({
+ *   username: 'john',
+ *   age: 30,
+ *   active: true,
+ *   createdAt: new Timestamp(new Date()),
+ *   location: new GeoPoint(40.7128, -74.0060)
+ * });
+ * ```
+ */
 export function convert(
   data: Record<string, FirestoreConverterValues>
 ): FirestoreResponseObjectField {
@@ -31,7 +54,7 @@ export function convert(
   return fields
 }
 
-function convertField(value: FirestoreConverterValues): FirestoreValueObject {
+function convertField(value: FirestoreConverterValues): Partial<FirestoreValueObject> {
   switch (true) {
     case isNull(value):
       return converters[FirestoreValueFieldNames.Null](value)
@@ -60,7 +83,12 @@ function convertField(value: FirestoreConverterValues): FirestoreValueObject {
   }
 }
 
-export const converters: Record<FirestoreValueFieldNames, any> = {
+// Each converter handles a specific type, but we use a generic signature to allow
+// the converters record to be typed as a lookup table
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ConverterFunction = (value: any) => Partial<FirestoreValueObject>
+
+export const converters: Record<FirestoreValueFieldNames, ConverterFunction> = {
   [FirestoreValueFieldNames.Null]: (value: null) => ({
     nullValue: value,
   }),

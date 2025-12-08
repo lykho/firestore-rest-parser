@@ -3,6 +3,22 @@ import { Reference } from './data-types/reference'
 import { Timestamp } from './data-types/timestamp'
 import { Bytes } from './data-types/bytes'
 
+/**
+ * Union type representing all possible values that can be returned from parsing
+ * a Firestore document.
+ */
+export type ParsedValue =
+  | null
+  | boolean
+  | string
+  | number
+  | GeoPointValue
+  | ParsedValue[]
+  | { [key: string]: ParsedValue }
+
+/**
+ * Enum of Firestore REST API field type names.
+ */
 export enum FirestoreValueFieldNames {
   Null = 'nullValue',
   Boolean = 'booleanValue',
@@ -39,7 +55,7 @@ export type GeoPointValue = {
 }
 
 export type ArrayValue = {
-  values: Partial<FirestoreValueObject>[]
+  values?: Partial<FirestoreValueObject>[]
 }
 
 export type MapValue = {
