@@ -37,7 +37,7 @@ export type NullValue = null
 
 export type BooleanValue = boolean
 
-export type IntegerValue = string
+export type IntegerValue = string | number
 
 export type DoubleValue = number
 
