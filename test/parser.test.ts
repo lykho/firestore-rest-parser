@@ -32,6 +32,16 @@ describe('Parser', () => {
     expect(res).toEqual({ field: 101 })
   })
 
+  it('should parse integer value from string', () => {
+    const obj = createRESTObject({
+      field: {
+        integerValue: '101',
+      },
+    })
+    const res = parse(obj)
+    expect(res).toEqual({ field: 101 })
+  })
+
   it('should parse double value', () => {
     const obj = createRESTObject({
       field: {

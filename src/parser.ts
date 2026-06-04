@@ -72,6 +72,13 @@ const createSimpleParser = (fieldName: FirestoreSimpleValueNames) => (
   value: FirestoreSimpleValueObject
 ) => value[fieldName]
 
+const integerParser = (
+  value: Record<FirestoreValueFieldNames.Integer, string | number>
+) => {
+  const raw = value[FirestoreValueFieldNames.Integer]
+  return typeof raw === 'string' ? Number(raw) : raw
+}
+
 const geoPointParser = (
   value: Record<FirestoreValueFieldNames.GeoPoint, GeoPointValue>
 ) => ({
@@ -108,9 +115,7 @@ const parsers: Record<FirestoreValueFieldNames, ParserFunction> = {
   [FirestoreValueFieldNames.Boolean]: createSimpleParser(
     FirestoreValueFieldNames.Boolean
   ),
-  [FirestoreValueFieldNames.Integer]: createSimpleParser(
-    FirestoreValueFieldNames.Integer
-  ),
+  [FirestoreValueFieldNames.Integer]: integerParser,
   [FirestoreValueFieldNames.Double]: createSimpleParser(
     FirestoreValueFieldNames.Double
   ),
