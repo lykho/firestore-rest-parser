@@ -1,6 +1,6 @@
 {
   "name": "firestore-rest-parser",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Parse and use Firestore REST API JSON as a pure js object",
   "license": "MIT",
   "type": "module",
