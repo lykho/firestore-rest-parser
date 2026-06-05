@@ -14,7 +14,9 @@ describe('Converter', () => {
       string,
       FirestoreConverterValues
     >
-    expect(() => convert(obj)).toThrowError('Unprocessable data type')
+    expect(() => convert(obj)).toThrowError(
+      'Unsupported Firestore value at "prop": received symbol'
+    )
   })
 
   it('should convert null value', () => {
@@ -273,7 +275,9 @@ describe('Converter', () => {
         string,
         FirestoreConverterValues
       >
-      expect(() => convert(obj)).toThrowError('Unprocessable data type')
+      expect(() => convert(obj)).toThrowError(
+        'Unsupported Firestore value at "prop": received undefined'
+      )
     })
 
     it('should throw error on function values', () => {
@@ -281,7 +285,54 @@ describe('Converter', () => {
         string,
         FirestoreConverterValues
       >
-      expect(() => convert(obj)).toThrowError('Unprocessable data type')
+      expect(() => convert(obj)).toThrowError(
+        'Unsupported Firestore value at "prop": received function'
+      )
+    })
+
+    it('should include nested paths in conversion errors', () => {
+      const obj = {
+        profile: {
+          address: undefined,
+        },
+      } as unknown as Record<string, FirestoreConverterValues>
+
+      expect(() => convert(obj)).toThrowError(
+        'Unsupported Firestore value at "profile.address": received undefined'
+      )
+    })
+
+    it('should describe unsupported Date values', () => {
+      const obj = { prop: new Date() } as unknown as Record<
+        string,
+        FirestoreConverterValues
+      >
+
+      expect(() => convert(obj)).toThrowError(
+        'Unsupported Firestore value at "prop": received Date'
+      )
+    })
+
+    it('should describe unsupported class instances', () => {
+      const obj = { prop: new Set([1, 2]) } as unknown as Record<
+        string,
+        FirestoreConverterValues
+      >
+
+      expect(() => convert(obj)).toThrowError(
+        'Unsupported Firestore value at "prop": received Set'
+      )
+    })
+
+    it('should describe unsupported bigint values', () => {
+      const obj = { prop: BigInt(1) } as unknown as Record<
+        string,
+        FirestoreConverterValues
+      >
+
+      expect(() => convert(obj)).toThrowError(
+        'Unsupported Firestore value at "prop": received bigint'
+      )
     })
 
     it('should convert zero values correctly', () => {

@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import { parse, createRESTObject } from '../src'
+import {
+  FirestoreResponseObject,
+  FirestoreValueObject,
+  IntegerMode,
+  parse,
+  createRESTObject,
+} from '../src'
 
 describe('Parser', () => {
   it('should parse nullValue', () => {
@@ -141,7 +147,7 @@ describe('Parser', () => {
 
   describe('Edge Cases', () => {
     it('should return null for null input', () => {
-      const res = parse(null as any)
+      const res = parse(null as unknown as FirestoreResponseObject)
       expect(res).toBeNull()
     })
 
@@ -256,6 +262,185 @@ describe('Parser', () => {
       const res = parse<User>(obj)
       expect(res?.name).toBe('John')
       expect(res?.age).toBe(30)
+    })
+
+    it('should preserve unsafe integers as strings by default', () => {
+      const obj = createRESTObject({
+        field: {
+          integerValue: '9007199254740993',
+        },
+      })
+
+      const res = parse(obj)
+      expect(res).toEqual({ field: '9007199254740993' })
+    })
+
+    it('should parse integers as bigint when requested', () => {
+      const obj = createRESTObject({
+        field: {
+          integerValue: '9007199254740993',
+        },
+      })
+
+      const res = parse(obj, { integerMode: 'bigint' })
+      expect(res).toEqual({ field: BigInt('9007199254740993') })
+    })
+
+    it('should parse numeric integers as strings when requested', () => {
+      const obj = createRESTObject({
+        field: {
+          integerValue: 42,
+        },
+      })
+
+      const res = parse(obj, { integerMode: 'string' })
+      expect(res).toEqual({ field: '42' })
+    })
+
+    it('should parse numeric integers as bigint when requested', () => {
+      const obj = createRESTObject({
+        field: {
+          integerValue: 42,
+        },
+      })
+
+      const res = parse(obj, { integerMode: 'bigint' })
+      expect(res).toEqual({ field: BigInt(42) })
+    })
+
+    it('should parse integers as numbers when requested', () => {
+      const obj = createRESTObject({
+        field: {
+          integerValue: '42',
+        },
+      })
+
+      const res = parse(obj, { integerMode: 'number' })
+      expect(res).toEqual({ field: 42 })
+    })
+
+    it('should throw for invalid integer strings', () => {
+      const obj = createRESTObject({
+        field: {
+          integerValue: '42.5',
+        } as unknown as FirestoreValueObject,
+      })
+
+      expect(() => parse(obj)).toThrowError(
+        'Invalid Firestore integer at "field": expected an integer string, received "42.5"'
+      )
+    })
+
+    it('should throw for non-integer numeric values', () => {
+      const obj = createRESTObject({
+        field: {
+          integerValue: 42.5,
+        } as unknown as FirestoreValueObject,
+      })
+
+      expect(() => parse(obj)).toThrowError(
+        'Invalid Firestore integer at "field": expected an integer, received 42.5'
+      )
+    })
+
+    it('should throw for multiple Firestore value keys in one field', () => {
+      const obj = createRESTObject({
+        field: {
+          integerValue: 1,
+          stringValue: 'bad',
+        } as unknown as FirestoreValueObject,
+      })
+
+      expect(() => parse(obj)).toThrowError(
+        'Invalid Firestore value at "field": expected exactly one Firestore value key, received integerValue, stringValue'
+      )
+    })
+
+    it('should throw when a field has no Firestore value key', () => {
+      const obj = createRESTObject({
+        field: {} as unknown as FirestoreValueObject,
+      })
+
+      expect(() => parse(obj)).toThrowError(
+        'Invalid Firestore value at "field": expected exactly one Firestore value key, received none'
+      )
+    })
+
+    it('should throw for malformed map values', () => {
+      const obj = createRESTObject({
+        profile: {
+          mapValue: {} as unknown as FirestoreValueObject,
+        } as unknown as FirestoreValueObject,
+      })
+
+      expect(() => parse(obj)).toThrowError(
+        'Invalid Firestore map at "profile": expected a fields object'
+      )
+    })
+
+    it('should throw for malformed arrays', () => {
+      const obj = createRESTObject({
+        tags: {
+          arrayValue: {
+            values: 'bad',
+          } as unknown as FirestoreValueObject,
+        } as unknown as FirestoreValueObject,
+      })
+
+      expect(() => parse(obj)).toThrowError(
+        'Invalid Firestore array at "tags": values must be an array when provided'
+      )
+    })
+
+    it('should throw when arrayValue is not an object', () => {
+      const obj = createRESTObject({
+        tags: {
+          arrayValue: null as unknown as FirestoreValueObject,
+        } as unknown as FirestoreValueObject,
+      })
+
+      expect(() => parse(obj)).toThrowError(
+        'Invalid Firestore array at "tags": expected an object with an optional values array'
+      )
+    })
+
+    it('should throw for malformed geopoints', () => {
+      const obj = createRESTObject({
+        location: {
+          geoPointValue: {
+            latitude: '0',
+            longitude: 0,
+          } as unknown as FirestoreValueObject,
+        } as unknown as FirestoreValueObject,
+      })
+
+      expect(() => parse(obj)).toThrowError(
+        'Invalid Firestore geopoint at "location": latitude and longitude must be numbers'
+      )
+    })
+
+    it('should throw when geoPointValue is not an object', () => {
+      const obj = createRESTObject({
+        location: {
+          geoPointValue: null as unknown as FirestoreValueObject,
+        } as unknown as FirestoreValueObject,
+      })
+
+      expect(() => parse(obj)).toThrowError(
+        'Invalid Firestore geopoint at "location": expected an object with latitude and longitude'
+      )
+    })
+
+    it('should throw for unsupported integer modes', () => {
+      const obj = createRESTObject({
+        field: {
+          integerValue: '42',
+        },
+      })
+
+      expect(() =>
+        parse(obj, { integerMode: 'mystery' as unknown as IntegerMode })
+      ).toThrowError('Unsupported Firestore value at "field": mystery')
     })
   })
 })

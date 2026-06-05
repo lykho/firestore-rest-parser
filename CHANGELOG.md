@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-06-05
+
+### Breaking Changes
+
+- `parse()` now preserves unsafe Firestore integers as strings by default instead of coercing them to numbers
+- `parse()` now throws descriptive errors for malformed Firestore payloads such as invalid integer strings, malformed arrays, malformed maps, or fields with multiple Firestore value keys
+- `Timestamp` now throws immediately for invalid dates or millisecond timestamps
+- `GeoPoint` now throws immediately for non-finite or out-of-range coordinates
+- `convert()` error messages are now path-aware and no longer use the generic `Unprocessable data type` text
+
+### Added
+
+- `parse(..., { integerMode })` support with `number`, `string`, `bigint`, and `smart` modes
+- Browser-friendly `Bytes` input support via `Uint8Array` and `ArrayBuffer`
+- Additional tests for malformed payloads, helper validation, binary encoding, and integer parsing modes
+
+### Changed
+
+- Hardened internal Firestore value typing and validation
+- Improved README wording and examples for integer parsing, helper usage, and error handling
+- Normalized `repository.url` in `package.json` to match npm publish expectations
+
 ## [2.0.0] - 2024-12-08
 
 ### Breaking Changes

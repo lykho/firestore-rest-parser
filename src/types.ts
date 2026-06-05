@@ -3,6 +3,8 @@ import { Reference } from './data-types/reference'
 import { Timestamp } from './data-types/timestamp'
 import { Bytes } from './data-types/bytes'
 
+export type ParsedIntegerValue = number | string | bigint
+
 /**
  * Union type representing all possible values that can be returned from parsing
  * a Firestore document.
@@ -12,6 +14,7 @@ export type ParsedValue =
   | boolean
   | string
   | number
+  | bigint
   | GeoPointValue
   | ParsedValue[]
   | { [key: string]: ParsedValue }
@@ -26,8 +29,8 @@ export enum FirestoreValueFieldNames {
   Double = 'doubleValue',
   Timestamp = 'timestampValue',
   String = 'stringValue',
-  Bytes = 'bytesValue', // base64 encoded string
-  Reference = 'referenceValue', // A reference to a document, e.g. projects/{project_id}/documents/{document_path}
+  Bytes = 'bytesValue',
+  Reference = 'referenceValue',
   GeoPoint = 'geoPointValue',
   Array = 'arrayValue',
   Map = 'mapValue',
@@ -54,15 +57,7 @@ export type GeoPointValue = {
   longitude: number
 }
 
-export type ArrayValue = {
-  values?: Partial<FirestoreValueObject>[]
-}
-
-export type MapValue = {
-  fields: Record<string, Partial<FirestoreValueObject>>
-}
-
-export type FirestoreValues =
+export type FirestoreSimpleValues =
   | NullValue
   | BooleanValue
   | IntegerValue
@@ -71,9 +66,30 @@ export type FirestoreValues =
   | StringValue
   | BytesValue
   | ReferenceValue
-  | GeoPointValue
-  | ArrayValue
-  | MapValue
+
+export type FirestoreSimpleValueObject =
+  | { nullValue: NullValue }
+  | { booleanValue: BooleanValue }
+  | { integerValue: IntegerValue }
+  | { doubleValue: DoubleValue }
+  | { timestampValue: TimestampValue }
+  | { stringValue: StringValue }
+  | { bytesValue: BytesValue }
+  | { referenceValue: ReferenceValue }
+
+export type FirestoreValueObject =
+  | FirestoreSimpleValueObject
+  | { geoPointValue: GeoPointValue }
+  | { arrayValue: ArrayValue }
+  | { mapValue: MapValue }
+
+export type ArrayValue = {
+  values?: FirestoreValueObject[]
+}
+
+export type MapValue = {
+  fields: Record<string, FirestoreValueObject>
+}
 
 export type FirestoreConverterValues =
   | NullValue
@@ -94,10 +110,6 @@ export interface MapConverterValue {
   [key: string]: FirestoreConverterValues
 }
 
-export type FirestoreValueObject = {
-  [key in FirestoreValueFieldNames]: FirestoreValues
-}
-
 export type FirestoreSimpleValueNames = Exclude<
   FirestoreValueFieldNames,
   | FirestoreValueFieldNames.Map
@@ -105,19 +117,13 @@ export type FirestoreSimpleValueNames = Exclude<
   | FirestoreValueFieldNames.GeoPoint
 >
 
-export type FirestoreSimpleValues = Exclude<
-  FirestoreValues,
-  MapValue | ArrayValue | GeoPointValue
->
+export type IntegerMode = 'number' | 'string' | 'bigint' | 'smart'
 
-export type FirestoreSimpleValueObject = {
-  [key in FirestoreSimpleValueNames]: FirestoreSimpleValues
+export interface ParseOptions {
+  integerMode?: IntegerMode
 }
 
-export type FirestoreResponseObjectField = Record<
-  string,
-  Partial<FirestoreValueObject>
->
+export type FirestoreResponseObjectField = Record<string, FirestoreValueObject>
 
 export interface FirestoreResponseObject {
   name: string
