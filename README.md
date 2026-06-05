@@ -2,9 +2,9 @@
 
 [![npm version](https://badge.fury.io/js/firestore-rest-parser.svg)](https://badge.fury.io/js/firestore-rest-parser)
 
-Parse and use [Firestore REST API JSON](https://firebase.google.com/docs/firestore/reference/rest/) as a pure js object.
-
-Or convert js object to Firestore REST structure.
+Parse [Firestore REST API JSON](https://firebase.google.com/docs/firestore/reference/rest/)
+into plain JavaScript objects, or convert JavaScript objects back into
+Firestore REST structure.
 
 **Zero dependencies** - lightweight and fast.
 
@@ -41,9 +41,11 @@ Or vice versa.
 
 ## Features
 
-- Parse Firestore REST structure into js object
-- Convert js object to Firestore REST compatible structure with type conversion
+- Parse Firestore REST structure into plain JavaScript objects
+- Convert JavaScript objects to Firestore REST compatible structure
 - Create full Firestore REST response structure
+- Preserve unsafe Firestore integers by default
+- Throw path-aware errors for malformed input
 - Full TypeScript support with generics
 - Zero runtime dependencies
 
@@ -80,7 +82,7 @@ const obj = {
       },
     },
     unreadMessages: {
-      integerValue: 5
+      integerValue: '5'
     }
   },
   createTime: '2024-01-15T12:00:00Z',
@@ -102,7 +104,7 @@ const data = parse(obj)
 
 ### Parse
 
-To parse Firestore REST structure use `parse` function.
+Use `parse` to turn Firestore REST fields into plain JavaScript values.
 
 ```typescript
 import { parse } from 'firestore-rest-parser'
@@ -110,7 +112,7 @@ import { parse } from 'firestore-rest-parser'
 const firestoreObject = {
   name: 'projects/my-project/databases/(default)/documents/collection/doc',
   fields: {
-    prop: { integerValue: 1 }
+    prop: { integerValue: '1' }
   },
   createTime: '2024-01-15T12:00:00Z',
   updateTime: '2024-01-15T12:00:00Z',
@@ -142,12 +144,38 @@ const user = parse<User>(firestoreResponse)
 
 **Note:** The generic type is a compile-time assertion only and is not validated at runtime.
 
+#### Integer parsing
+
+By default, `parse` uses `integerMode: 'smart'`:
+
+- Safe integers are returned as `number`
+- Unsafe integers are preserved as `string`
+
+```typescript
+const doc = createRESTObject({
+  small: { integerValue: '42' },
+  large: { integerValue: '9007199254740993' }
+})
+
+parse(doc)
+// => { small: 42, large: '9007199254740993' }
+```
+
+You can override this behavior when needed:
+
+```typescript
+parse(doc, { integerMode: 'number' })
+parse(doc, { integerMode: 'string' })
+parse(doc, { integerMode: 'bigint' })
+```
+
 ### Convert
 
-To convert js object to Firestore REST structure use `convert` function.
+Use `convert` to wrap plain JavaScript values in Firestore's typed REST format.
 
 **Note**
-> Timestamp, Reference, Bytes, GeoPoint data types must be instances of type helper classes
+> `Timestamp`, `Reference`, `Bytes`, and `GeoPoint` values must be instances of
+> the provided helper classes.
 
 ```typescript
 import { convert } from 'firestore-rest-parser'
@@ -177,7 +205,8 @@ const res = convert(data)
 
 #### Type helpers
 
-To store `Date` or `timestamp` value use `Timestamp` helper. Provided time will be converted to ISO format.
+Use `Timestamp` for `Date` objects or millisecond timestamps. Invalid values
+throw immediately.
 ```typescript
 import { convert, Timestamp } from 'firestore-rest-parser'
 
@@ -187,21 +216,22 @@ const data = {
 }
 
 convert(data)
-// Both will produce: { timestampValue: "2022-01-09T12:58:49.175Z" }
+// Both become: { timestampValue: "2022-01-09T12:58:49.175Z" }
 ```
 
-To store `Buffer` value use `Bytes` helper. Provided buffer will be converted to base64 string.
+Use `Bytes` for `Uint8Array`, `ArrayBuffer`, or Node.js `Buffer` values. The
+input is converted to a base64 string.
 ```typescript
 import { convert, Bytes } from 'firestore-rest-parser'
 
 const data = {
-  buff: new Bytes(Buffer.from('value'))
+  buff: new Bytes(new TextEncoder().encode('value'))
 }
 
 convert(data)
 ```
 
-To store `Reference` (path to element in db) value use `Reference` helper.
+Use `Reference` for Firestore document paths.
 ```typescript
 import { convert, Reference } from 'firestore-rest-parser'
 
@@ -212,7 +242,8 @@ const data = {
 convert(data)
 ```
 
-To store `GeoPoint` value use `GeoPoint` helper.
+Use `GeoPoint` for latitude/longitude pairs. Invalid coordinates throw
+immediately.
 ```typescript
 import { convert, GeoPoint } from 'firestore-rest-parser'
 
@@ -225,7 +256,7 @@ convert(data)
 
 #### Firestore REST object
 
-`convert` function creates only part (`fields`) of the Firestore Rest object. To create full structure
+`convert` creates only the `fields` section of a Firestore REST object. To create the full structure
 (with `name`, `createTime`, `updateTime`) use `createRESTObject` function.
 
 ```typescript
@@ -258,7 +289,11 @@ const res = createRESTObject(
 #### Empty arrays
 ```typescript
 // Parsing empty arrays
-parse({ fields: { items: { arrayValue: {} } } })
+parse(
+  createRESTObject({
+    items: { arrayValue: {} }
+  })
+)
 // => { items: [] }
 
 // Converting empty arrays
@@ -275,18 +310,26 @@ parse(doc) // => null
 
 ### Error Handling
 
-The `convert` function throws an error for unsupported data types:
+`parse` and `convert` both throw descriptive, path-aware errors for malformed
+input:
 
 ```typescript
-// These will throw "Unprocessable data type" error:
-convert({ fn: () => {} })      // Functions
-convert({ sym: Symbol() })     // Symbols
-convert({ undef: undefined })  // undefined
+convert({ profile: { age: undefined } })
+// => Unsupported Firestore value at "profile.age": received undefined
+
+parse(
+  createRESTObject({
+    id: {
+      integerValue: '42.5'
+    }
+  })
+)
+// => Invalid Firestore integer at "id": expected an integer string, received "42.5"
 ```
 
 ## Firestore type conversion
 
-| Javascript Type         | Firestore Type | Type helper required |
+| JavaScript Type        | Firestore Type | Type helper required |
 |-------------------------|----------------|----------------------|
 | Null                    | Null           |                      |
 | Boolean                 | Boolean        |                      |
@@ -294,7 +337,7 @@ convert({ undef: undefined })  // undefined
 | Number (float)          | Double         |                      |
 | Date or UTC timestamp   | Timestamp      | +                    |
 | String                  | String         |                      |
-| Buffer (base64 string)  | Bytes          | +                    |
+| Binary data             | Bytes          | +                    |
 | Reference (string path) | Reference      | +                    |
 | GeoPoint                | GeoPoint       | +                    |
 | Array                   | Array          |                      |
@@ -304,7 +347,7 @@ convert({ undef: undefined })  // undefined
 
 | Export | Description |
 |--------|-------------|
-| `parse<T>(response)` | Parses Firestore REST response to plain JS object |
+| `parse<T>(response, options?)` | Parses Firestore REST response to plain JavaScript values |
 | `convert(data)` | Converts plain JS object to Firestore REST format |
 | `createRESTObject(fields, name?, createTime?, updateTime?)` | Creates full Firestore document structure |
 | `Timestamp` | Helper class for timestamp values |

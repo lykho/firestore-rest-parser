@@ -7,10 +7,8 @@ import {
   isPlainObject,
 } from './type-guards'
 import {
-  ArrayConverterValue,
   FirestoreConverterValues,
   FirestoreResponseObjectField,
-  FirestoreValueFieldNames,
   FirestoreValueObject,
   MapConverterValue,
 } from './types'
@@ -39,7 +37,7 @@ import { Bytes } from './data-types/bytes'
  *   active: true,
  *   createdAt: new Timestamp(new Date()),
  *   location: new GeoPoint(40.7128, -74.0060)
- * });
+ * })
  * ```
  */
 export function convert(
@@ -48,82 +46,107 @@ export function convert(
   const fields: FirestoreResponseObjectField = {}
 
   Object.entries(data).forEach(([name, value]) => {
-    fields[name] = convertField(value)
+    fields[name] = convertField(value, name)
   })
 
   return fields
 }
 
-function convertField(value: FirestoreConverterValues): Partial<FirestoreValueObject> {
-  switch (true) {
-    case isNull(value):
-      return converters[FirestoreValueFieldNames.Null](value)
-    case isBoolean(value):
-      return converters[FirestoreValueFieldNames.Boolean](value)
-    case isNumber(value):
-      return Number.isInteger(value)
-        ? converters[FirestoreValueFieldNames.Integer](value)
-        : converters[FirestoreValueFieldNames.Double](value)
-    case isString(value):
-      return converters[FirestoreValueFieldNames.String](value)
-    case value instanceof Timestamp:
-      return converters[FirestoreValueFieldNames.Timestamp](value)
-    case value instanceof GeoPoint:
-      return converters[FirestoreValueFieldNames.GeoPoint](value)
-    case value instanceof Bytes:
-      return converters[FirestoreValueFieldNames.Bytes](value)
-    case value instanceof Reference:
-      return converters[FirestoreValueFieldNames.Reference](value)
-    case isArray(value):
-      return converters[FirestoreValueFieldNames.Array](value)
-    case isPlainObject(value):
-      return converters[FirestoreValueFieldNames.Map](value)
-    default:
-      throw new Error('Unprocessable data type')
+function convertField(
+  value: FirestoreConverterValues,
+  path: string
+): FirestoreValueObject {
+  if (isNull(value)) {
+    return {
+      nullValue: value,
+    }
   }
+
+  if (isBoolean(value)) {
+    return {
+      booleanValue: value,
+    }
+  }
+
+  if (isNumber(value)) {
+    return Number.isInteger(value)
+      ? { integerValue: value }
+      : { doubleValue: value }
+  }
+
+  if (isString(value)) {
+    return {
+      stringValue: value,
+    }
+  }
+
+  if (value instanceof Timestamp) {
+    return {
+      timestampValue: value.value,
+    }
+  }
+
+  if (value instanceof GeoPoint) {
+    return {
+      geoPointValue: value.value,
+    }
+  }
+
+  if (value instanceof Bytes) {
+    return {
+      bytesValue: value.value,
+    }
+  }
+
+  if (value instanceof Reference) {
+    return {
+      referenceValue: value.value,
+    }
+  }
+
+  if (isArray(value)) {
+    return {
+      arrayValue: {
+        values: value.map((item, index) => convertField(item, `${path}[${index}]`)),
+      },
+    }
+  }
+
+  if (isPlainObject(value)) {
+    return {
+      mapValue: {
+        fields: convertMap(value as MapConverterValue, path),
+      },
+    }
+  }
+
+  throw new Error(
+    `Unsupported Firestore value at "${path}": received ${describeValue(value)}`
+  )
 }
 
-// Each converter handles a specific type, but we use a generic signature to allow
-// the converters record to be typed as a lookup table
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type ConverterFunction = (value: any) => Partial<FirestoreValueObject>
+function convertMap(
+  value: MapConverterValue,
+  path: string
+): FirestoreResponseObjectField {
+  const fields: FirestoreResponseObjectField = {}
 
-export const converters: Record<FirestoreValueFieldNames, ConverterFunction> = {
-  [FirestoreValueFieldNames.Null]: (value: null) => ({
-    nullValue: value,
-  }),
-  [FirestoreValueFieldNames.Boolean]: (value: boolean) => ({
-    booleanValue: value,
-  }),
-  [FirestoreValueFieldNames.Integer]: (value: number) => ({
-    integerValue: value,
-  }),
-  [FirestoreValueFieldNames.Double]: (value: number) => ({
-    doubleValue: value,
-  }),
-  [FirestoreValueFieldNames.Timestamp]: (timestamp: Timestamp) => ({
-    timestampValue: timestamp.value,
-  }),
-  [FirestoreValueFieldNames.String]: (value: string) => ({
-    stringValue: value,
-  }),
-  [FirestoreValueFieldNames.Bytes]: (bytes: Bytes) => ({
-    bytesValue: bytes.value,
-  }),
-  [FirestoreValueFieldNames.Reference]: (reference: Reference) => ({
-    referenceValue: reference.value,
-  }),
-  [FirestoreValueFieldNames.GeoPoint]: (geoPoint: GeoPoint) => ({
-    geoPointValue: geoPoint.value,
-  }),
-  [FirestoreValueFieldNames.Array]: (value: ArrayConverterValue) => ({
-    arrayValue: {
-      values: value.map(convertField),
-    },
-  }),
-  [FirestoreValueFieldNames.Map]: (value: MapConverterValue) => ({
-    mapValue: {
-      fields: convert(value),
-    },
-  }),
+  Object.entries(value).forEach(([name, nestedValue]) => {
+    fields[name] = convertField(nestedValue, `${path}.${name}`)
+  })
+
+  return fields
+}
+
+function describeValue(value: unknown): string {
+  if (value === undefined) return 'undefined'
+  if (typeof value === 'function') return 'function'
+  if (typeof value === 'symbol') return 'symbol'
+  if (value instanceof Date) return 'Date'
+
+  if (value && typeof value === 'object') {
+    return value.constructor?.name ?? 'object'
+  }
+
+  return typeof value
 }
